@@ -169,7 +169,7 @@ std::ostream & operator << (std::ostream &out, const solution& s) {
 }
 
 
-unsigned iteration = 0;
+std::uint64_t iteration = 0;
 double bestyet = 0;
 
 void explore(const solution &s, int r, unsigned maxsize) {
@@ -187,7 +187,8 @@ void explore(const solution &s, int r, unsigned maxsize) {
     bestyet=score;
   }
   if (iteration % 10000 == 0) {
-      std::cout << iteration/1000 << "K       \r";
+      std::cout << "r=" << r << ", maxsize=" << maxsize
+                << ", iteration=" << iteration << "            \r";
       std::cout.flush();
   }
   iteration++;
@@ -198,40 +199,51 @@ void explore(const solution &s, int r, unsigned maxsize) {
     if (s.s[i].y < miny) miny = s.s[i].y;
     if (s.s[i].y > maxy) maxy = s.s[i].y;
   }
+
+  // randomize the search space
+  triple totry[1000];
+  unsigned k = 0;
   for (int x = minx-1; x <= maxx+1; x++) {
     for (int y = miny-1; y <= maxy+1; y++) {
       for (int t = 1; t <= r; t++) {
-        if (s.valid_addition(triple(x, y, t))) {
-          // std::cout << "Adding " << triple(x,y,t) << std::endl;
-          solution s1 = s;
-          s1.add(triple(x,y,t));
-          // std::cout << "=====================================" << std::endl;
-          // s1.pretty_print(std::cout);
-          solution s1p;
-          for (unsigned i = 0; i < s1.n; i++) {
-            if (s1.valid_removal(i)) {
-              // std::cout << "--" << std::endl;
-              solution stmp = s1;
-              // std::cout << stmp << std::endl;
-              // std::cout << "removing " << i << " - " << s1.s[i] << std::endl;
-              stmp.remove(i);
-              // std::cout << stmp << std::endl;
-              // stmp.pretty_print(std::cout);
-              if (i == 0 || compare_solutions(stmp, s1p)) {
-                s1p = stmp;
-              }
-            }
-          }
-          // std::cout << "-------" << std::endl;
-          // s1p.pretty_print(std::cout);
-          // std::cout << "vs" << std::endl;
-          // s.pretty_print(std::cout);
-          // std::cout << "-------" << std::endl;
-          // std::cout << (s1p == s) << std::endl;
-          if (s1p == s) {
-            explore(s1, r, maxsize);
+        totry[k++] = triple(x, y, t);
+      }
+    }
+  }
+
+  for (unsigned ti = 0; ti < k; ti++) {
+    unsigned ri = ti+rand()%(k-ti);
+    triple xyt = totry[ri];
+    totry[ri] = totry[ti];
+    if (s.valid_addition(xyt)) {
+      // std::cout << "Adding " << triple(x,y,t) << std::endl;
+      solution s1 = s;
+      s1.add(xyt);
+      // std::cout << "=====================================" << std::endl;
+      // s1.pretty_print(std::cout);
+      solution s1p;
+      for (unsigned i = 0; i < s1.n; i++) {
+        if (s1.valid_removal(i)) {
+          // std::cout << "--" << std::endl;
+          solution stmp = s1;
+          // std::cout << stmp << std::endl;
+          // std::cout << "removing " << i << " - " << s1.s[i] << std::endl;
+          stmp.remove(i);
+          // std::cout << stmp << std::endl;
+          // stmp.pretty_print(std::cout);
+          if (i == 0 || compare_solutions(stmp, s1p)) {
+            s1p = stmp;
           }
         }
+      }
+      // std::cout << "-------" << std::endl;
+      // s1p.pretty_print(std::cout);
+      // std::cout << "vs" << std::endl;
+      // s.pretty_print(std::cout);
+      // std::cout << "-------" << std::endl;
+      // std::cout << (s1p == s) << std::endl;
+      if (s1p == s) {
+        explore(s1, r, maxsize);
       }
     }
   }
